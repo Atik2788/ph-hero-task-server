@@ -77,17 +77,23 @@ async function run() {
 
           // billing Collection
           app.get('/billing-list', verifyJWT, async(req, res)=>{
+            const page = parseInt(req.query.page);
+            const size = parseInt(req.query.size);
+            console.log(page, size)
+
             const query = {};
-            const decodedEmail = req.decoded.email;
-            // if(email !=decodedEmail){
-            //     return res.status(403).send({message: 'forbidden access'})
-            // }
 
             const cursor = billingCollection.find(query)
-            const billingList = await cursor.toArray();
+            const billingList = await cursor.skip(page*size).limit(size).toArray();
             const count = await billingCollection.estimatedDocumentCount()
 
             res.send({count, billingList})
+        })
+
+        app.post('/billing-list', async(req, res) =>{
+            const bill = req.body;
+            const result = await billingCollection.insertOne(bill);
+            res.send(result)
         })
 
     }
