@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt = require('jsonwebtoken')
 require('dotenv').config();
 
 const app = express();
@@ -18,6 +19,20 @@ async function run() {
     try{
         const userInformationCollection = client.db('ph-hero-user-table').collection('user-details')
         const billingCollection = client.db('ph-hero-user-table').collection('billing-collection')
+
+        app.get('/jwt', async(req, res)=>{
+            const email = req.query.email;
+            const query = {email: email}
+            const user = await userInformationCollection.findOne(query);
+            // console.log(user)
+
+            if(user){
+                const token = jwt.sign({email}, process.env.ACCESS_TOKEN, {expiresIn: '70h' })
+                return res.send({accessToken: token})
+            }
+
+            res.status(403).send({token: ''})
+        })
 
         app.get('/login', async (req, res) => {
             const email = req.query.email;
