@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken')
 require('dotenv').config();
 
@@ -79,16 +79,39 @@ async function run() {
           app.get('/billing-list', verifyJWT, async(req, res)=>{
             const page = parseInt(req.query.page);
             const size = parseInt(req.query.size);
+
+            const search = req.query.search;
+            // console.log(search);
             console.log(page, size)
 
-            const query = {};
+            let query = {};
 
-            const cursor = billingCollection.find(query)
-            const billingList = await cursor.skip(page*size).limit(size).toArray();
+            if(search.length){
+                query = {
+                //      $text: {
+                //     $search: search
+                // }
+
+                "$or":[
+                    {"fullName":{$regex:search}},
+                    {"email":{$regex:search}},
+                    {"phone":{$regex:search}}
+                ]
+            }
+            }
+
+            const options = {
+                sort: {createdTime: -1}
+            }
+
+            const cursor = billingCollection.find(query, options)
             const count = await billingCollection.estimatedDocumentCount()
+            const billingList = await cursor.skip(page*size).limit(size).toArray();
 
-            res.send({count, billingList})
+            res.send({billingList, count})
         })
+
+
 
         app.post('/billing-list', async(req, res) =>{
             const bill = req.body;
@@ -96,6 +119,24 @@ async function run() {
             res.send(result)
         })
 
+        app.put('/billing-list/:id', async(req, res) =>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)};
+            const updateBill = req.body;
+            const option = {upsert: true};
+            const updatedDoc = {
+                $set: updateBill
+            }
+            const updateResult = await billingCollection.updateOne(filter, updatedDoc, option);
+            res.send(updateResult)
+        })
+
+        app.delete('/billing-list/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const result = await billingCollection.deleteOne(filter)
+            res.send(result)
+        })
     }
 
     finally{
