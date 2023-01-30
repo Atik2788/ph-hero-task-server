@@ -81,17 +81,13 @@ async function run() {
             const size = parseInt(req.query.size);
 
             const search = req.query.search;
-            // console.log(search);
+            console.log(search);
             console.log(page, size)
 
             let query = {};
 
             if(search.length){
                 query = {
-                //      $text: {
-                //     $search: search
-                // }
-
                 "$or":[
                     {"fullName":{$regex:search}},
                     {"email":{$regex:search}},
@@ -100,17 +96,22 @@ async function run() {
             }
             }
 
-            const options = {
-                sort: {createdTime: -1}
-            }
+            const opt = {
+                sort: {createTime: -1},
+            };
 
-            const cursor = billingCollection.find(query, options)
             const count = await billingCollection.estimatedDocumentCount()
-            const billingList = await cursor.skip(page*size).limit(size).toArray();
+            const billingList = await billingCollection.find(query, opt).skip(page*size).limit(size).toArray();
 
             res.send({billingList, count})
         })
 
+
+        app.get('/billing-total', verifyJWT, async(req, res)=>{
+            const query = {};
+            const option = await billingCollection.find(query).toArray();
+            res.send(option)
+        })
 
 
         app.post('/billing-list', async(req, res) =>{
